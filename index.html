@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<title>Mix'n'match Dashboard</title>
+<style>
+body { font-family: Arial; margin:20px; }
+.entry { border:1px solid #ccc; padding:10px; margin:5px; }
+.new { border-left:5px solid green; }
+.removed { border-left:5px solid red; }
+.highlight { background:#ffffcc; }
+.controls { margin-bottom:10px; }
+small { color:#666; }
+</style>
+</head>
+<body>
+
+<h2>Mix'n'match Dashboard</h2>
+
+<div class="controls">
+  Filter user: <input id="userFilter">
+  Text: <input id="textFilter">
+  <button onclick="loadFeeds()">Reload</button>
+</div>
+
+<div id="output"></div>
+
+<script>
+const catalogs = [7746,7741,7678,7738,7278];
+const proxy = "https://api.allorigins.win/raw?url=";
+
+const LAST_KEY = "mixnmatch_last_seen";
+
+async function loadFeeds() {
+  const output = document.getElementById("output");
+  output.innerHTML = "Loading...";
+
+  let entries = [];
+
+  for (let cat of catalogs) {
+    try {
+      const url = proxy + encodeURIComponent(
+        `https://mix-n-match.toolforge.org/api.php?query=rc_atom&catalog=${cat}`
+      );
+
+      const res = await fetch(url);
+      const text = await res.text();
+
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(text, "text/xml");
+
+      xml.querySelectorAll("entry").forEach(e => {
+        entries.push({
+          title: e.querySelector("title")?.textContent,
+          updated: e.querySelector("updated")?.textContent,
+          content: e.querySelector("content")?.textContent,
+          author: e.querySelector("author name")?.textContent,
+          catalog: cat
+        });
+      });
+
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  entries.sort((a,b)=> new Date(b.updated)-new Date(a.updated));
+
+  render(entries);
+}
+
+function render(entries) {
+  const output = document.getElementById("output");
+  const userFilter = document.getElementById("userFilter").value.toLowerCase();
+  const textFilter = document.getElementById("textFilter").value.toLowerCase();
+
+  const lastSeen = localStorage.getItem(LAST_KEY);
+
+  let newest = entries.length ? entries[0].updated : null;
+  if (newest) localStorage.setItem(LAST_KEY, newest);
+
+  output.innerHTML = entries
+    .filter(e =>
+      (!userFilter || e.author?.toLowerCase().includes(userFilter)) &&
+      (!textFilter || e.title.toLowerCase().includes(textFilter))
+    )
+    .map(e => {
+      let cls = "entry";
+
+      if (e.title.includes("removed")) cls += " removed";
+      else cls += " new";
+
+      let highlight = "";
+      if (lastSeen && new Date(e.updated) > new Date(lastSeen)) {
+        highlight = "highlight";
+      }
+
+      return `
+        <div class="${cls} ${highlight}">
+          <b>${e.title}</b><br>
+          <small>${e.updated} | ${e.author} | catalog ${e.catalog}</small><br>
+          ${e.content}
+        </div>
+      `;
+    })
+    .join("");
+}
+
+loadFeeds();
+</script>
+
+</body>
+</html>
