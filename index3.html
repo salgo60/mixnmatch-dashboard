@@ -1,0 +1,639 @@
+
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mix'n'match Dashboard V3</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#121933;
+      --panel2:#182246;
+      --text:#eef3ff;
+      --muted:#aeb9d6;
+      --line:#2a376a;
+      --accent:#8ab4ff;
+      --good:#7dd3a7;
+      --warn:#ffd166;
+      --bad:#ff8b8b;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      background:linear-gradient(180deg,#0b1020,#0d1530 45%,#0a1022);
+      color:var(--text);
+    }
+    .wrap{
+      max-width:1280px;
+      margin:0 auto;
+      padding:32px 20px 64px;
+    }
+    h1,h2,h3{margin:0 0 10px}
+    h1{font-size:2rem}
+    h2{font-size:1.3rem;margin-top:28px}
+    h3{font-size:1rem;color:var(--text)}
+    p,li{color:var(--muted);line-height:1.5}
+    .hero{
+      background:linear-gradient(135deg,rgba(138,180,255,.16),rgba(125,211,167,.09));
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:24px;
+      box-shadow:0 8px 30px rgba(0,0,0,.28);
+    }
+    .sub{font-size:.98rem;max-width:900px}
+    .grid{
+      display:grid;
+      gap:16px;
+    }
+    .cards{
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      margin-top:18px;
+    }
+    .card{
+      background:rgba(18,25,51,.9);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:18px;
+    }
+    .metric{
+      font-size:2rem;
+      font-weight:800;
+      margin-top:6px;
+      letter-spacing:.3px;
+    }
+    .label{
+      color:var(--muted);
+      font-size:.92rem;
+    }
+    .small{
+      font-size:.9rem;
+      color:var(--muted);
+    }
+    .club-grid{
+      grid-template-columns:repeat(auto-fit,minmax(360px,1fr));
+      margin-top:16px;
+    }
+    .club{
+      background:rgba(18,25,51,.96);
+      border:1px solid var(--line);
+      border-radius:22px;
+      overflow:hidden;
+    }
+    .club-head{
+      padding:18px 18px 8px;
+      background:linear-gradient(180deg,rgba(138,180,255,.06),transparent);
+    }
+    .club-body{padding:0 18px 18px}
+    .meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:8px;
+    }
+    .pill{
+      padding:6px 10px;
+      border-radius:999px;
+      background:var(--panel2);
+      border:1px solid var(--line);
+      color:var(--muted);
+      font-size:.82rem;
+    }
+    .row{
+      display:grid;
+      grid-template-columns:170px 1fr 64px;
+      gap:10px;
+      align-items:center;
+      margin:12px 0;
+    }
+    .row .name{color:#dfe7ff;font-size:.94rem}
+    .bar{
+      height:12px;
+      border-radius:999px;
+      background:#0e1530;
+      border:1px solid #24315f;
+      overflow:hidden;
+      position:relative;
+    }
+    .fill{
+      height:100%;
+      border-radius:999px;
+      background:linear-gradient(90deg,var(--accent),#78f0c2);
+    }
+    .num{
+      text-align:right;
+      color:#fff;
+      font-variant-numeric:tabular-nums;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:12px;
+      font-size:.95rem;
+    }
+    th,td{
+      padding:10px 8px;
+      border-top:1px solid rgba(255,255,255,.08);
+      text-align:left;
+      vertical-align:top;
+    }
+    th{color:#c9d5fb;font-weight:700}
+    td{color:var(--muted)}
+    .diff-pos{color:var(--good);font-weight:700}
+    .diff-neg{color:var(--warn);font-weight:700}
+    .muted{color:var(--muted)}
+    a{color:#b9d1ff}
+    .foot{
+      margin-top:28px;
+      padding:18px;
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:rgba(18,25,51,.75);
+    }
+    .legend{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .legend span{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      color:var(--muted);
+      font-size:.9rem;
+    }
+    .sw{
+      width:14px;height:14px;border-radius:4px;display:inline-block
+    }
+    .sw1{background:linear-gradient(90deg,var(--accent),#78f0c2)}
+    .sw2{background:var(--warn)}
+    .sw3{background:var(--good)}
+    .sw4{background:var(--bad)}
+    code{
+      color:#d5e0ff;
+      background:#11182f;
+      border:1px solid #2b3a70;
+      padding:2px 6px;
+      border-radius:8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Mix'n'match Dashboard V3</h1>
+      <p class="sub">
+        Syftet här är att <strong>visa skillnader</strong> mellan Mix'n'Match, Wikidata och svWikipedia per klubb/databas —
+        inte att avgöra vilken källa som “har rätt”. För IFKDB och liknande källor finns ofta en annan granularitet:
+        spelare på seniormatchnivå, matcher och mål per match, medan Wikidata och Wikipedia ofta summerar på årsnivå eller bygger på notabilitet.
+      </p>
+      <div class="legend">
+        <span><i class="sw sw1"></i> Antal i källa</span>
+        <span><i class="sw sw2"></i> Gap mot Wikidata</span>
+        <span><i class="sw sw3"></i> Externt ID i Wikidata</span>
+        <span><i class="sw sw4"></i> Tolkningsrisk / olika granularitet</span>
+      </div>
+    </section>
+
+    <section class="grid cards">
+      <div class="card">
+        <div class="label">Klubbar / kataloger i denna vy</div>
+        <div class="metric">5</div>
+        <div class="small">IFK Norrköping, IFKDB / IFK Göteborg, AIK, Landskrona BoIS, Djurgården</div>
+      </div>
+      <div class="card">
+        <div class="label">Största Mix'n'Match-katalog</div>
+        <div class="metric">2210</div>
+        <div class="small">Djurgården history</div>
+      </div>
+      <div class="card">
+        <div class="label">Största Wikidata-klubbmängd</div>
+        <div class="metric">589</div>
+        <div class="small">Djurgården via <code>P54</code></div>
+      </div>
+      <div class="card">
+        <div class="label">Största svWikipedia-kategori här</div>
+        <div class="metric">447</div>
+        <div class="small">Fotbollsspelare i AIK</div>
+      </div>
+    </section>
+
+    <h2>Klubböversikt</h2>
+    <div class="grid club-grid">
+
+      <article class="club">
+        <div class="club-head">
+          <h3>IFK Norrköping player</h3>
+          <div class="meta">
+            <span class="pill">Katalog 7746</span>
+            <span class="pill">Klubb i WD: Q108001798 / ev. Q329607</span>
+            <span class="pill">Extern-ID: P14243</span>
+          </div>
+        </div>
+        <div class="club-body">
+          <div class="row">
+            <div class="name">Mix'n'Match</div>
+            <div class="bar"><div class="fill" style="width:100.0%"></div></div>
+            <div class="num">584</div>
+          </div>
+          <div class="row">
+            <div class="name">Wikidata klubb (<code>P54</code>)</div>
+            <div class="bar"><div class="fill" style="width:71.7%"></div></div>
+            <div class="num">419</div>
+          </div>
+    
+          <div class="row">
+            <div class="name">svWikipedia kategori</div>
+            <div class="bar"><div class="fill" style="width:55.3%"></div></div>
+            <div class="num">323</div>
+          </div>
+        
+          <table>
+            <thead>
+              <tr>
+                <th>Jämförelse</th>
+                <th>Skillnad</th>
+                <th>Tolkning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Mix'n'Match − Wikidata klubb</td>
+                <td class="diff-neg">+165</td>
+                <td>Katalogen är större än klubbmängden i Wikidata.</td>
+              </tr>
+    
+              <tr>
+                <td>svWikipedia − Wikidata klubb</td>
+                <td class="diff-neg">-96</td>
+                <td>Wikipedia är mindre än klubbmängden i Wikidata.</td>
+              </tr>
+        
+            </tbody>
+          </table>
+          <p class="small">IFK Norrköping: katalogen visar fler kandidater än både Wikidata och svWikipedia.</p>
+          <p class="small">
+            <a href="https://mix-n-match.toolforge.org/#/catalog/7746">Mix'n'Match</a> ·
+            <a href="https://www.wikidata.org/wiki/Property:P14243">P14243</a> ·
+            <a href="https://w.wiki/KZpW">WD-fråga</a>
+             · <a href="https://sv.wikipedia.org/wiki/Kategori:Fotbollsspelare_i_IFK_Norrk%C3%B6ping">svWikipedia kategori</a>
+          </p>
+        </div>
+      </article>
+    
+      <article class="club">
+        <div class="club-head">
+          <h3>IFKDB / IFK Göteborg</h3>
+          <div class="meta">
+            <span class="pill">Katalog 7678</span>
+            <span class="pill">Klubb i WD: Q201567</span>
+            <span class="pill">Extern-ID: P11905</span>
+          </div>
+        </div>
+        <div class="club-body">
+          <div class="row">
+            <div class="name">Mix'n'Match</div>
+            <div class="bar"><div class="fill" style="width:100.0%"></div></div>
+            <div class="num">1013</div>
+          </div>
+          <div class="row">
+            <div class="name">Wikidata klubb (<code>P54</code>)</div>
+            <div class="bar"><div class="fill" style="width:56.1%"></div></div>
+            <div class="num">568</div>
+          </div>
+    
+          <div class="row">
+            <div class="name">svWikipedia kategori</div>
+            <div class="bar"><div class="fill" style="width:42.5%"></div></div>
+            <div class="num">431</div>
+          </div>
+        
+          <div class="row">
+            <div class="name">Wikidata externt ID</div>
+            <div class="bar"><div class="fill" style="width:61.6%"></div></div>
+            <div class="num">624</div>
+          </div>
+        
+          <table>
+            <thead>
+              <tr>
+                <th>Jämförelse</th>
+                <th>Skillnad</th>
+                <th>Tolkning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Mix'n'Match − Wikidata klubb</td>
+                <td class="diff-neg">+445</td>
+                <td>Katalogen är större än klubbmängden i Wikidata.</td>
+              </tr>
+    
+              <tr>
+                <td>svWikipedia − Wikidata klubb</td>
+                <td class="diff-neg">-137</td>
+                <td>Wikipedia är mindre än klubbmängden i Wikidata.</td>
+              </tr>
+        
+              <tr>
+                <td>Externt ID − Wikidata klubb</td>
+                <td class="diff-pos">+56</td>
+                <td>Antal med extern ID-property jämfört med antal med klubbrelation.</td>
+              </tr>
+        
+            </tbody>
+          </table>
+          <p class="small">IFKDB har annan granularitet: spelare som gjort minst en seniormatch, samt matcher och mål på matchnivå.</p>
+          <p class="small">
+            <a href="https://mix-n-match.toolforge.org/#/catalog/7678">Mix'n'Match</a> ·
+            <a href="https://www.wikidata.org/wiki/Property:P11905">P11905</a> ·
+            <a href="https://w.wiki/KZpa">WD-fråga</a>
+             · <a href="https://sv.wikipedia.org/wiki/Kategori:Fotbollsspelare_i_IFK_G%C3%B6teborg">svWikipedia kategori</a>
+          </p>
+        </div>
+      </article>
+    
+      <article class="club">
+        <div class="club-head">
+          <h3>AIK soccer player</h3>
+          <div class="meta">
+            <span class="pill">Katalog 7738</span>
+            <span class="pill">Klubb i WD: Q221602</span>
+            <span class="pill">Extern-ID: P14202</span>
+          </div>
+        </div>
+        <div class="club-body">
+          <div class="row">
+            <div class="name">Mix'n'Match</div>
+            <div class="bar"><div class="fill" style="width:100.0%"></div></div>
+            <div class="num">1307</div>
+          </div>
+          <div class="row">
+            <div class="name">Wikidata klubb (<code>P54</code>)</div>
+            <div class="bar"><div class="fill" style="width:42.1%"></div></div>
+            <div class="num">550</div>
+          </div>
+    
+          <div class="row">
+            <div class="name">svWikipedia kategori</div>
+            <div class="bar"><div class="fill" style="width:34.2%"></div></div>
+            <div class="num">447</div>
+          </div>
+        
+          <div class="row">
+            <div class="name">Wikidata externt ID</div>
+            <div class="bar"><div class="fill" style="width:41.4%"></div></div>
+            <div class="num">541</div>
+          </div>
+        
+          <table>
+            <thead>
+              <tr>
+                <th>Jämförelse</th>
+                <th>Skillnad</th>
+                <th>Tolkning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Mix'n'Match − Wikidata klubb</td>
+                <td class="diff-neg">+757</td>
+                <td>Katalogen är större än klubbmängden i Wikidata.</td>
+              </tr>
+    
+              <tr>
+                <td>svWikipedia − Wikidata klubb</td>
+                <td class="diff-neg">-103</td>
+                <td>Wikipedia är mindre än klubbmängden i Wikidata.</td>
+              </tr>
+        
+              <tr>
+                <td>Externt ID − Wikidata klubb</td>
+                <td class="diff-neg">-9</td>
+                <td>Antal med extern ID-property jämfört med antal med klubbrelation.</td>
+              </tr>
+        
+            </tbody>
+          </table>
+          <p class="small">Mix'n'Match-katalogen är betydligt större och du har redan noterat att felaktiga poster finns.</p>
+          <p class="small">
+            <a href="https://mix-n-match.toolforge.org/#/catalog/7738">Mix'n'Match</a> ·
+            <a href="https://www.wikidata.org/wiki/Property:P14202">P14202</a> ·
+            <a href="https://w.wiki/KZqA">WD-fråga</a>
+             · <a href="https://sv.wikipedia.org/wiki/Kategori:Fotbollsspelare_i_AIK">svWikipedia kategori</a>
+          </p>
+        </div>
+      </article>
+    
+      <article class="club">
+        <div class="club-head">
+          <h3>Landskrona BOIS player</h3>
+          <div class="meta">
+            <span class="pill">Katalog 7741</span>
+            <span class="pill">Klubb i WD: Q863273</span>
+            <span class="pill">Extern-ID: P14210</span>
+          </div>
+        </div>
+        <div class="club-body">
+          <div class="row">
+            <div class="name">Mix'n'Match</div>
+            <div class="bar"><div class="fill" style="width:100.0%"></div></div>
+            <div class="num">970</div>
+          </div>
+          <div class="row">
+            <div class="name">Wikidata klubb (<code>P54</code>)</div>
+            <div class="bar"><div class="fill" style="width:29.1%"></div></div>
+            <div class="num">282</div>
+          </div>
+    
+          <div class="row">
+            <div class="name">svWikipedia kategori</div>
+            <div class="bar"><div class="fill" style="width:22.2%"></div></div>
+            <div class="num">215</div>
+          </div>
+        
+          <div class="row">
+            <div class="name">Wikidata externt ID</div>
+            <div class="bar"><div class="fill" style="width:31.0%"></div></div>
+            <div class="num">301</div>
+          </div>
+        
+          <table>
+            <thead>
+              <tr>
+                <th>Jämförelse</th>
+                <th>Skillnad</th>
+                <th>Tolkning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Mix'n'Match − Wikidata klubb</td>
+                <td class="diff-neg">+688</td>
+                <td>Katalogen är större än klubbmängden i Wikidata.</td>
+              </tr>
+    
+              <tr>
+                <td>svWikipedia − Wikidata klubb</td>
+                <td class="diff-neg">-67</td>
+                <td>Wikipedia är mindre än klubbmängden i Wikidata.</td>
+              </tr>
+        
+              <tr>
+                <td>Externt ID − Wikidata klubb</td>
+                <td class="diff-pos">+19</td>
+                <td>Antal med extern ID-property jämfört med antal med klubbrelation.</td>
+              </tr>
+        
+            </tbody>
+          </table>
+          <p class="small">Stor skillnad mellan katalog och både Wikidata och svWikipedia.</p>
+          <p class="small">
+            <a href="https://mix-n-match.toolforge.org/#/catalog/7741">Mix'n'Match</a> ·
+            <a href="https://www.wikidata.org/wiki/Property:P14210">P14210</a> ·
+            <a href="https://w.wiki/KZqW">WD-fråga</a>
+             · <a href="https://sv.wikipedia.org/wiki/Kategori:Fotbollsspelare_i_Landskrona_BoIS">svWikipedia kategori</a>
+          </p>
+        </div>
+      </article>
+    
+      <article class="club">
+        <div class="club-head">
+          <h3>Djurgården history</h3>
+          <div class="meta">
+            <span class="pill">Katalog 7278</span>
+            <span class="pill">Klubb i WD: Q622430</span>
+            <span class="pill">Extern-ID: P13307</span>
+          </div>
+        </div>
+        <div class="club-body">
+          <div class="row">
+            <div class="name">Mix'n'Match</div>
+            <div class="bar"><div class="fill" style="width:100.0%"></div></div>
+            <div class="num">2210</div>
+          </div>
+          <div class="row">
+            <div class="name">Wikidata klubb (<code>P54</code>)</div>
+            <div class="bar"><div class="fill" style="width:26.7%"></div></div>
+            <div class="num">589</div>
+          </div>
+    
+          <div class="row">
+            <div class="name">Wikidata externt ID</div>
+            <div class="bar"><div class="fill" style="width:32.4%"></div></div>
+            <div class="num">715</div>
+          </div>
+        
+          <table>
+            <thead>
+              <tr>
+                <th>Jämförelse</th>
+                <th>Skillnad</th>
+                <th>Tolkning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Mix'n'Match − Wikidata klubb</td>
+                <td class="diff-neg">+1621</td>
+                <td>Katalogen är större än klubbmängden i Wikidata.</td>
+              </tr>
+    
+              <tr>
+                <td>Externt ID − Wikidata klubb</td>
+                <td class="diff-pos">+126</td>
+                <td>Antal med extern ID-property jämfört med antal med klubbrelation.</td>
+              </tr>
+        
+            </tbody>
+          </table>
+          <p class="small">Extra tydlig skillnad mellan historikkatalog och klubbkoppling i Wikidata.</p>
+          <p class="small">
+            <a href="https://mix-n-match.toolforge.org/#/catalog/7278">Mix'n'Match</a> ·
+            <a href="https://www.wikidata.org/wiki/Property:P13307">P13307</a> ·
+            <a href="https://w.wiki/KZrU">WD-fråga</a>
+            
+          </p>
+        </div>
+      </article>
+    
+    </div>
+
+    <h2>Sammanfattande tabell</h2>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Klubb / databas</th>
+            <th>Mix'n'Match</th>
+            <th>WD klubb (P54)</th>
+            <th>WD externt ID</th>
+            <th>svWikipedia</th>
+            <th>Mix − WD</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <tr>
+            <td>IFK Norrköping player</td>
+            <td>584</td>
+            <td>419</td>
+            <td>–</td>
+            <td>323</td>
+            <td class="diff-neg">+165</td>
+          </tr>
+    
+          <tr>
+            <td>IFKDB / IFK Göteborg</td>
+            <td>1013</td>
+            <td>568</td>
+            <td>624</td>
+            <td>431</td>
+            <td class="diff-neg">+445</td>
+          </tr>
+    
+          <tr>
+            <td>AIK soccer player</td>
+            <td>1307</td>
+            <td>550</td>
+            <td>541</td>
+            <td>447</td>
+            <td class="diff-neg">+757</td>
+          </tr>
+    
+          <tr>
+            <td>Landskrona BOIS player</td>
+            <td>970</td>
+            <td>282</td>
+            <td>301</td>
+            <td>215</td>
+            <td class="diff-neg">+688</td>
+          </tr>
+    
+          <tr>
+            <td>Djurgården history</td>
+            <td>2210</td>
+            <td>589</td>
+            <td>715</td>
+            <td>–</td>
+            <td class="diff-neg">+1621</td>
+          </tr>
+    
+        </tbody>
+      </table>
+    </div>
+
+    <div class="foot">
+      <h2>Tolkningsram</h2>
+      <ul>
+        <li><strong>IFKDB</strong> kan ha finare granularitet: spelare som gjort minst en seniormatch, plus matcher och mål på matchnivå.</li>
+        <li><strong>Wikidata</strong> kan vara mer spretigt: juniornivå kan förekomma, och klubbkopplingar kan vara ofullständiga eller definierade på annat sätt.</li>
+        <li><strong>Wikipedia</strong> bygger på notabilitet och är därför normalt mindre än både domänspecifika databaser och kandidatlistor.</li>
+        <li>Den här sidan försöker därför <strong>visa skillnaderna</strong>, inte lösa dem åt användaren.</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
