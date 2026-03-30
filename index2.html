@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<title>Mix'n'match Dashboard V2</title>
+
+<style>
+body { font-family: Arial; margin:20px; }
+.entry { border:1px solid #ccc; padding:10px; margin:5px; }
+.new { border-left:5px solid green; }
+.removed { border-left:5px solid red; }
+.highlight { background:#ffffcc; }
+.controls { margin-bottom:10px; }
+.stats { background:#f5f5f5; padding:10px; margin-bottom:10px; }
+small { color:#666; }
+button { margin-left:10px; }
+</style>
+
+</head>
+<body>
+
+<h2>Mix'n'match Dashboard V2</h2>
+
+<div class="controls">
+  User: <input id="userFilter">
+  Text: <input id="textFilter">
+  <label><input type="checkbox" id="onlyMe"> Only Salgo60</label>
+  <button onclick="loadFeeds()">Reload</button>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div id="output"></div>
+
+<script>
+const catalogs = [7746,7741,7678,7738,7278];
+const proxy = "https://api.allorigins.win/raw?url=";
+const LAST_KEY = "mixnmatch_last_seen";
+
+async function loadFeeds() {
+  const output = document.getElementById("output");
+  output.innerHTML = "Loading...";
+
+  let entries = [];
+
+  for (let cat of catalogs) {
+    try {
+      const url = proxy + encodeURIComponent(
+        `https://mix-n-match.toolforge.org/api.php?query=rc_atom&catalog=${cat}`
+      );
+
+      const res = await fetch(url);
+      const text = await res.text();
+
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(text, "text/xml");
+
+      xml.querySelectorAll("entry").forEach(e => {
+        const contentHTML = e.querySelector("content")?.innerHTML || "";
+
+        const qidMatch = contentHTML.match(/Q\d+/);
+        const extMatch = contentHTML.match(/External ID:\s*([^<]+)/);
+
+        entries.push({
+          title: e.querySelector("title")?.textContent,
+          updated: e.querySelector("updated")?.textContent,
+          content: contentHTML,
+          author: e.querySelector("author name")?.textContent,
+          catalog: cat,
+          qid: qidMatch ? qidMatch[0] : null,
+          externalId: extMatch ? extMatch[1].trim() : null
+        });
+      });
+
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  entries.sort((a,b)=> new Date(b.updated)-new Date(a.updated));
+
+  render(entries);
+}
+
+function render(entries) {
+  const output = document.getElementById("output");
+  const statsDiv = document.getElementById("stats");
+
+  const userFilter = document.getElementById("userFilter").value.toLowerCase();
+  const textFilter = document.getElementById("textFilter").value.toLowerCase();
+  const onlyMe = document.getElementById("onlyMe").checked;
+
+  const lastSeen = localStorage.getItem(LAST_KEY);
+  const newest = entries.length ? entries[0].updated : null;
+  if (newest) localStorage.setItem(LAST_KEY, newest);
+
+  let stats = {
+    total: 0,
+    perUser: {},
+    perCatalog: {}
+  };
+
+  const filtered = entries.filter(e => {
+    if (onlyMe && e.author !== "Salgo60") return false;
+    if (userFilter && !e.author?.toLowerCase().includes(userFilter)) return false;
+    if (textFilter && !e.title.toLowerCase().includes(textFilter)) return false;
+    return true;
+  });
+
+  filtered.forEach(e => {
+    stats.total++;
+
+    stats.perUser[e.author] = (stats.perUser[e.author] || 0) + 1;
+    stats.perCatalog[e.catalog] = (stats.perCatalog[e.catalog] || 0) + 1;
+  });
+
+  statsDiv.innerHTML = `
+    <b>Total:</b> ${stats.total}<br>
+    <b>Per user:</b> ${Object.entries(stats.perUser).map(([u,c])=>`${u}: ${c}`).join(" | ")}<br>
+    <b>Per catalog:</b> ${Object.entries(stats.perCatalog).map(([c,n])=>`${c}: ${n}`).join(" | ")}
+  `;
+
+  output.innerHTML = filtered.map(e => {
+
+    let cls = "entry";
+    if (e.title.toLowerCase().includes("removed")) cls += " removed";
+    else cls += " new";
+
+    let highlight = "";
+    if (lastSeen && new Date(e.updated) > new Date(lastSeen)) {
+      highlight = "highlight";
+    }
+
+    const qlink = e.qid
+      ? `<a href="https://www.wikidata.org/wiki/${e.qid}" target="_blank">${e.qid}</a>`
+      : "";
+
+    return `
+      <div class="${cls} ${highlight}">
+        <b>${e.title}</b><br>
+        <small>${e.updated} | ${e.author} | catalog ${e.catalog}</small><br>
+        Q: ${qlink} | External: ${e.externalId || "-"}<br>
+        ${e.content}
+      </div>
+    `;
+  }).join("");
+}
+
+loadFeeds();
+</script>
+
+</body>
+</html>
